@@ -1,0 +1,11 @@
+---
+title: "EDS 241 Take Home Final"
+author: "Scout Leonard"
+date: "3/10/2022"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
