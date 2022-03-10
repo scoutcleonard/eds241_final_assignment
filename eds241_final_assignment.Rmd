@@ -1,11 +1,69 @@
 ---
-title: "EDS 241 Take Home Final"
+title: "EDS241: Take Home Final"
 author: "Scout Leonard"
-date: "3/10/2022"
-output: html_document
----
+date: '`r format(Sys.time(), "%m/%d/%Y")`'
+output: 
+  pdf_document:
+    toc: false
+    number_sections: yes
+header-includes:
+  - \setlength{\parindent}{1em}
+  - \usepackage{float}
+--- 
 
-```{r setup, include=FALSE}
-knitr::opts_chunk$set(echo = TRUE)
+``` {r setup, echo = FALSE, message = FALSE, warning = FALSE}
+# set default chunk options
+knitr::opts_chunk$set(fig.width = 4, fig.height = 3, 
+                      echo = TRUE, message = FALSE, warning = FALSE)
+
+
+# load packages
+packages=c("stargazer",
+           "here",
+           "tidyr",
+           "dplyr",
+           "stringr",
+           "janitor", 
+           "cowplot",
+           "ggplot2",
+           "tinytex",
+           "datasets",
+           "tibble",
+           "estimatr",
+           "knitr")
+
+for (i in packages) {
+  if (require(i,character.only=TRUE)==FALSE) {
+    install.packages(i,repos='http://cran.us.r-project.org')
+  }
+  else {
+    require(i,character.only=TRUE)
+  }
+}
+
+#devtools::install_github('rstudio/rmarkdown')
+options(scipen=999) # not scientific notation
+```
+
+# Read in and clean data
+
+```{r}
+#read in data 
+housing <- read.csv(here("data", "KM_EDS241.csv"))
+```
+
+# Question A
+
+```{r}
+ols_mod <- lm_robust(nearinc ~ rprice, data = housing)
+```
+
+```{r}
+#create table with regression results
+ols_mod_table <- tidy(ols_mod)
+
+ols_mod_table %>% 
+  select(term, estimate, std.error, p.value, conf.low, conf.high) %>%
+  kable()
 ```
 
