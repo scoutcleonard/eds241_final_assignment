@@ -58,7 +58,7 @@ housing <- read.csv(here("data", "KM_EDS241.csv"))
 
 **Using the data for 1981, estimate a simple OLS regression of real house values on the indicator for being located near the incinerator in 1981. What is the house value “penalty” for houses located near the incinerator? Does this estimated coefficient correspond to the ‘causal’ effect of the incinerator (and the negative amenities that come with it) on housing values? Explain why or why not.**
 
-The code chunk below estimates a simple OLS regerssion of real house values on the indicator for being located near the incinerator in 1981.
+The code chunk below estimates a simple OLS regression of real house values on the indicator for being located near the incinerator in 1981.
 
 ```{r}
 #filter housing for only observations from 1981
@@ -121,7 +121,23 @@ summary(housing_1978_farinc) %>%
 
 In comparing summary statistics for variables from 1978 Andover houses from near and far from the incinerator, we can see that houses far from the incinerator have higher mean and median area, land, and price, and lower mean and median age. This suggests location choice of the incinerator was _not_ random. 
 
-NOTE: maybe do hypothesis testing???
+In the code chunk below, linear regressions return the average difference in outcomes between houses near and far from the incinerator. 
+
+```{r}
+mod1_1978 <- lm_robust(area ~ nearinc, data  = housing_1978)
+
+mod2_1978 <- lm_robust(land ~ nearinc, data = housing_1978)
+
+mod3_1978 <- lm_robust(rprice ~ nearinc, data = housing_1978)
+```
+
+The results indicate that on average, houses near the incinerator have an area `r round(mod1_1978$coefficient[2], digits = 5)` square feet smaller than houses far from the incinerator. 
+
+On average, houses near the incinerator have `r round(mod2_1978$coefficient[2], digits = 7)` fewer square feet of lot compared to houses far from the incinerator. 
+
+On average, houses near the incinerator have an inflation-adjusted sales price that is  `r round(mod3_1978$coefficient[2], digits = 7)` less than houses far from the incinerator. 
+
+While these are the returned average differences in 1978 between houses near and far from the incinerator, none of the Beta 1 values, which represent the average difference between the two groups, are significant below the 0.1 significance level. 
 
 \newpage
 
@@ -129,13 +145,18 @@ NOTE: maybe do hypothesis testing???
 
 **Based on the observed differences in (b), explain why the estimate in (a) is likely to be biased downward (i.e., overstate the negative effect of the incinerator on housing values).**
 
-Based on the observed differences in (b), the estimate in (a) is likely to be biased downward (overstate the negative effect of the incinerator on housing values), becuase there are variables that interact with 
+Based on the observed differences in (b), the estimate in (a) is likely to be biased downward (overstate the negative effect of the incinerator on housing values), because there are variables that are correlated with whether or not a home is near or far from the incinerator. 
 
 \newpage
 
 # Question D
 
 **Use a difference-in-differences (DD) estimator to estimate the causal effect of the incinerator on housing values without controlling for house and lot characteristics. Interpret the magnitude and sign of the estimated DD coefficient.**
+
+```{r}
+#dd <- lm(formula = rprice ~ nearinc + )
+```
+
 
 \newpage
 
