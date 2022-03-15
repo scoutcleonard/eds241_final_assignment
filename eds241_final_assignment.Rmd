@@ -5,7 +5,7 @@ date: '`r format(Sys.time(), "%m/%d/%Y")`'
 output: 
   pdf_document:
     toc: false
-    number_sections: yes
+    number_sections: no
 header-includes:
   - \setlength{\parindent}{1em}
   - \usepackage{float}
@@ -52,18 +52,111 @@ options(scipen=999) # not scientific notation
 housing <- read.csv(here("data", "KM_EDS241.csv"))
 ```
 
+\newpage
+
 # Question A
 
+**Using the data for 1981, estimate a simple OLS regression of real house values on the indicator for being located near the incinerator in 1981. What is the house value “penalty” for houses located near the incinerator? Does this estimated coefficient correspond to the ‘causal’ effect of the incinerator (and the negative amenities that come with it) on housing values? Explain why or why not.**
+
+The code chunk below estimates a simple OLS regerssion of real house values on the indicator for being located near the incinerator in 1981.
+
 ```{r}
-ols_mod <- lm_robust(nearinc ~ rprice, data = housing)
+#filter housing for only observations from 1981
+housing_1981 <- housing %>% 
+  filter(year == 1981)
+
+#model simple ols regression
+ols_mod_1981 <- lm_robust(nearinc ~ rprice, data = housing_1981)
 ```
+
+The code chuck below inputs the outputs of the simple OLS regression `ols_mod_1981` into a table using the function `kable()`. 
 
 ```{r}
 #create table with regression results
-ols_mod_table <- tidy(ols_mod)
+ols_mod_1981_table <- tidy(ols_mod_1981)
 
-ols_mod_table %>% 
+#print table 
+ols_mod_1981_table %>% 
   select(term, estimate, std.error, p.value, conf.low, conf.high) %>%
   kable()
 ```
 
+The house value "penalty" for houses located near the incinerator is `r abs(round(ols_mod_1981$coefficients[2], digits = 7))`
+
+This estimated coefficient does not correspond to the 'causal' effect of the incinerator. It is likely that there are other variables which effect the proximity of houses to the incinerator, causing omitted variables bias in this model. 
+
+\newpage
+
+# Question B
+
+**Using the data for 1978, provide some evidence the location choice of the incinerator was not “random”, but rather selected on the basis of house values and characteristics. [Hint: in the 1978 sample, are house values and characteristics balanced by nearinc status?]**
+
+```{r}
+#filter housing for only observations from 1981
+housing_1978 <- housing %>%
+  filter(year == 1978)
+```
+
+## Houses Near the Incinerator: 1978 Summary
+
+```{r}
+housing_1978_nearinc <- housing_1978 %>% 
+  filter(nearinc == 1)
+
+summary(housing_1978_nearinc) %>% 
+  kable()
+```
+
+## Houses Far from the Incinerator: 1978 Summary
+
+```{r}
+housing_1978_farinc <- housing_1978 %>% 
+  filter(nearinc == 0)
+
+summary(housing_1978_farinc) %>% 
+  kable()
+```
+
+
+
+In comparing summary statistics for variables from 1978 Andover houses from near and far from the incinerator, we can see that houses far from the incinerator have higher mean and median area, land, and price, and lower mean and median age. This suggests location choice of the incinerator was _not_ random. 
+
+NOTE: maybe do hypothesis testing???
+
+\newpage
+
+# Question C
+
+**Based on the observed differences in (b), explain why the estimate in (a) is likely to be biased downward (i.e., overstate the negative effect of the incinerator on housing values).**
+
+Based on the observed differences in (b), the estimate in (a) is likely to be biased downward (overstate the negative effect of the incinerator on housing values), becuase there are variables that interact with 
+
+\newpage
+
+# Question D
+
+**Use a difference-in-differences (DD) estimator to estimate the causal effect of the incinerator on housing values without controlling for house and lot characteristics. Interpret the magnitude and sign of the estimated DD coefficient.**
+
+\newpage
+
+# Question E
+
+**Report the 95% confidence interval for the estimate of the causal effect on the incinerator in (d).**
+
+\newpage
+
+# Question F
+
+**How does your answer in (d) changes when you control for house and lot characteristics? Test the hypothesis that the coefficients on the house and lot characteristics are all jointly equal to 0.**
+
+\newpage
+
+# Question G
+
+**Using the results from the DD regression in (f), calculate by how much did real housing values change on average between 1978 and 1981.**
+
+\newpage
+
+# Question H
+
+**Explain (in words) what is the key assumption underlying the causal interpretation of the DD estimator in the context of the incinerator construction in North Andover.**
