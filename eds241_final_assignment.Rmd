@@ -30,7 +30,9 @@ packages=c("stargazer",
            "datasets",
            "tibble",
            "estimatr",
-           "knitr")
+           "knitr",
+           "plm",
+           "car")
 
 for (i in packages) {
   if (require(i,character.only=TRUE)==FALSE) {
@@ -66,7 +68,7 @@ housing_1981 <- housing %>%
   filter(year == 1981)
 
 #model simple ols regression
-ols_mod_1981 <- lm_robust(nearinc ~ rprice, data = housing_1981)
+ols_mod_1981 <- lm_robust(rprice ~ nearinc, data = housing_1981)
 ```
 
 \noindent The code chuck below inputs the outputs of the simple OLS regression `ols_mod_1981` into a table using the function `kable()`. 
@@ -81,9 +83,9 @@ ols_mod_1981_table %>%
   kable()
 ```
 
-\noindent The house value "penalty" for houses located near the incinerator is `r abs(round(ols_mod_1981$coefficients[2], digits = 7))`
+\noindent The house value "penalty" for houses located near the incinerator is `r abs(round(ols_mod_1981$coefficients[2], digits = 2))` dollars. 
 
-\noindent This estimated coefficient does not correspond to the 'causal' effect of the incinerator. It is likely that there are other variables which effect the proximity of houses to the incinerator, causing omitted variables bias in this model. 
+\noindent This estimated coefficient does respond to the 'causal' effect of the incinerator, although there can be other variables which effect the penalty for houses located near the incinerator, due to omitted variables bias. 
 
 \newpage
 
@@ -99,6 +101,8 @@ housing_1978 <- housing %>%
 
 ## Houses Near the Incinerator: 1978 Summary Exploration
 
+\noindent The code chunk below filters the data for observations from the housing in 1978 subset for only the houses near the incinerator. It returns the summary statistics for each of the seven variables for this subset of a subset.
+
 ```{r}
 housing_1978_nearinc <- housing_1978 %>% 
   filter(nearinc == 1)
@@ -107,7 +111,11 @@ summary(housing_1978_nearinc) %>%
   kable()
 ```
 
+\newpage
+
 ## Houses Far from the Incinerator: 1978 Summary Exploration
+
+\noindent The code chunk below filters the data for observations from the housing in 1978 subset for only the houses far from the incinerator. It returns the summary statistics for each of the seven variables for this subset of a subset.
 
 ```{r}
 housing_1978_farinc <- housing_1978 %>% 
@@ -123,7 +131,7 @@ summary(housing_1978_farinc) %>%
 
 ## Simple OLS: Average Differences
 
-### Average Difference in Area 
+### Average Difference in Area of the House
 
 ```{r}
 mod1_1978 <- lm_robust(area ~ nearinc, data  = housing_1978)
@@ -137,6 +145,8 @@ mod1_1978_table %>%
   kable()
 ```
 
+### Average Difference in Area of the Lot
+
 ```{r}
 mod2_1978 <- lm_robust(land ~ nearinc, data = housing_1978)
 
@@ -149,27 +159,11 @@ mod2_1978_table %>%
   kable()
 ```
 
-```{r}
-mod3_1978 <- lm_robust(rprice ~ nearinc, data = housing_1978)
-
-#create table with regression results
-mod3_1978_table <- tidy(mod1_1978)
-
-#print table 
-mod3_1978_table %>% 
-  select(term, estimate, std.error, p.value, conf.low, conf.high) %>%
-  kable()
-```
-
-
 \noindent The results indicate that on average, houses near the incinerator have an area `r abs(round(mod1_1978$coefficient[2], digits = 2))` square feet smaller than houses far from the incinerator. 
 
 \noindent On average, houses near the incinerator have `r abs(round(mod2_1978$coefficient[2], digits = 2))` fewer square feet of lot compared to houses far from the incinerator. 
 
-\noindent On average, houses near the incinerator have an inflation-adjusted sales price that is  `r abs(round(mod3_1978$coefficient[2], digits = 2))` dollars less than houses far from the incinerator. 
-
-
-\noindent While these are the returned average differences in 1978 between houses near and far from the incinerator, none of the Beta 1 values, which represent the average difference between the two groups, are not significant below the 0.1 significance level. This means we can claim that
+\noindent These differences show that on average, houses near and far from the incinerator have statistically different characteristics. This serves as evidence that the siting of the generator was not "random." 
 
 \newpage
 
@@ -177,7 +171,7 @@ mod3_1978_table %>%
 
 **Based on the observed differences in (b), explain why the estimate in (a) is likely to be biased downward (i.e., overstate the negative effect of the incinerator on housing values).**
 
-\noindent Based on the observed differences in (b), the estimate in (a) is likely to be biased downward (overstate the negative effect of the incinerator on housing values), because there are variables that are correlated with whether or not a home is near or far from the incinerator. 
+\noindent Based on the observed differences in (b), the estimate in (a) is likely to be biased downward (overstate the negative effect of the incinerator on housing values), because variables such as size and area probably already brought down the value of houses where the incinerator was placed, but the effect of the incinerator on housing values emphasized the difference in values between houses near and far from the incinerator in North Andover. 
 
 \newpage
 
@@ -186,22 +180,26 @@ mod3_1978_table %>%
 **Use a difference-in-differences (DD) estimator to estimate the causal effect of the incinerator on housing values without controlling for house and lot characteristics. Interpret the magnitude and sign of the estimated DD coefficient.**
 
 ```{r}
-dd <- lm(formula = rprice ~ nearinc +
-           land +
-           area +
-           rooms +
-           age +
-           year,
-           # as.factor(land) +
-           # as.factor(area) +
-           # as.factor(rooms) +
-           # as.factor(age) +
-           # as.factor(year),
+dd <- lm(formula = rprice ~ nearinc,
          data = housing)
 
 se_dd <- starprep(dd, stat = c("std.error"), se_type = "HC2", alpha = 0.05)
+
+summary(dd)
 ```
 
+```{r}
+# DD REGRESSION
+DD <- plm(rprice ~ nearinc,
+               index = c("year"), 
+          model = "within", 
+          effect = "twoways", 
+          data = housing)
+
+summary(DD)
+```
+
+\noindent
 
 \newpage
 
@@ -209,17 +207,50 @@ se_dd <- starprep(dd, stat = c("std.error"), se_type = "HC2", alpha = 0.05)
 
 **Report the 95% confidence interval for the estimate of the causal effect on the incinerator in (d).**
 
+```{r}
+DD_ci_95 <- confint(DD)
+
+DD_ci_95
+```
+
+
 \newpage
 
 # Question F
 
 **How does your answer in (d) changes when you control for house and lot characteristics? Test the hypothesis that the coefficients on the house and lot characteristics are all jointly equal to 0.**
 
+```{r}
+DD_2 <- plm(rprice ~ nearinc +
+            area +
+            land +
+            rooms +
+            age,
+               index = c("year"), 
+          model = "within", 
+          effect = "twoways", 
+          data = housing)
+
+summary(DD_2)
+```
+
+```{r}
+#linear hypothesis
+linearHypothesis(model = DD_2, 
+                 c("area = 0", 
+                   "land = 0", 
+                   "rooms = 0", 
+                   "age = 0"), 
+                   white.adjust  = "hc2")
+```
+
 \newpage
 
 # Question G
 
 **Using the results from the DD regression in (f), calculate by how much did real housing values change on average between 1978 and 1981.**
+
+
 
 \newpage
 
