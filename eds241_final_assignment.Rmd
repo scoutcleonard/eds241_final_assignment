@@ -51,7 +51,9 @@ options(scipen=999) # not scientific notation
 
 ```{r}
 #read in data 
-housing <- read.csv(here("data", "KM_EDS241.csv"))
+housing <- read.csv(here("data", "KM_EDS241.csv")) %>% 
+  mutate(nearinc = as.factor(nearinc),
+         year = as.factor(year))
 ```
 
 \newpage
@@ -68,7 +70,8 @@ housing_1981 <- housing %>%
   filter(year == 1981)
 
 #model simple ols regression
-ols_mod_1981 <- lm_robust(rprice ~ nearinc, data = housing_1981)
+ols_mod_1981 <- lm_robust(rprice ~ nearinc, 
+                          data = housing_1981)
 ```
 
 \noindent The code chuck below inputs the outputs of the simple OLS regression `ols_mod_1981` into a table using the function `kable()`. 
@@ -180,24 +183,14 @@ mod2_1978_table %>%
 **Use a difference-in-differences (DD) estimator to estimate the causal effect of the incinerator on housing values without controlling for house and lot characteristics. Interpret the magnitude and sign of the estimated DD coefficient.**
 
 ```{r}
-dd <- lm(formula = rprice ~ nearinc,
+dd <- lm_robust(formula = rprice ~ nearinc +
+           year,
          data = housing)
-
-se_dd <- starprep(dd, stat = c("std.error"), se_type = "HC2", alpha = 0.05)
 
 summary(dd)
 ```
 
-```{r}
-# DD REGRESSION
-DD <- plm(rprice ~ nearinc,
-               index = c("year"), 
-          model = "within", 
-          effect = "twoways", 
-          data = housing)
-
-summary(DD)
-```
+The DD value tells us that by holding time constant, the houses near the incinerator cost `r abs(round(dd$coefficient[2], digits = 2))` less than houses far from the incinerator. 
 
 \noindent
 
@@ -208,11 +201,12 @@ summary(DD)
 **Report the 95% confidence interval for the estimate of the causal effect on the incinerator in (d).**
 
 ```{r}
-DD_ci_95 <- confint(DD)
+dd_ci_95 <- confint(dd)
 
-DD_ci_95
+dd_ci_95
 ```
 
+The 95% confidence interval for the estimate of the causal effect on the incinerator is (d) is `r round(dd_ci_95[2], digits = 2)` to `r round(dd_ci_95[2,2], digits = 2)`
 
 \newpage
 
@@ -221,22 +215,24 @@ DD_ci_95
 **How does your answer in (d) changes when you control for house and lot characteristics? Test the hypothesis that the coefficients on the house and lot characteristics are all jointly equal to 0.**
 
 ```{r}
-DD_2 <- plm(rprice ~ nearinc +
-            area +
-            land +
-            rooms +
-            age,
-               index = c("year"), 
-          model = "within", 
-          effect = "twoways", 
-          data = housing)
+dd_2 <- lm_robust(formula = rprice ~ nearinc +
+             year +
+             age +
+             rooms +
+             area +
+             land,
+         data = housing)
 
-summary(DD_2)
+summary(dd_2)
 ```
+
+\newpage
+
+When you control for house and lot characteristics, the difference in price between houses near and far from the incinerator, holding all else equal is, is smaller than in the model in which we do not control for these characteristics. This smaller Beta 1 value, however, is no longer statistically significant in the new model. This means that beings near or far from the incinerator may not be a good indicator for the price of a house in North Andover.
 
 ```{r}
 #linear hypothesis
-linearHypothesis(model = DD_2, 
+linearHypothesis(model = dd_2, 
                  c("area = 0", 
                    "land = 0", 
                    "rooms = 0", 
@@ -244,16 +240,20 @@ linearHypothesis(model = DD_2,
                    white.adjust  = "hc2")
 ```
 
+With this P value, I would reject the null hypothesis that the coefficients on the house and lot characteristics are all jointly equal to 0. 
+
 \newpage
 
 # Question G
 
-**Using the results from the DD regression in (f), calculate by how much did real housing values change on average between 1978 and 1981.**
+**Using the results from the DD regression in (f), calculate by how much did real housing values change (for the control group) on average between 1978 and 1981.**
 
-
+Between 1978 and 1981, real housing values increased by `r round(dd_2$coefficient[3], digits = 2)` dollars if all other variables are held equal. 
 
 \newpage
 
 # Question H
 
 **Explain (in words) what is the key assumption underlying the causal interpretation of the DD estimator in the context of the incinerator construction in North Andover.**
+
+A key assumption of the DD estimator corresponds to the parallel trend assumption, where the control group, the houses far from the incinerator, provide a valid counterfactual for the temporal evolution of mean outcomes (housing prices) in the treatment group, houses near the incinerator, in the absence of a change in treatment (placement of the incinerator).
