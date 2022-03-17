@@ -96,20 +96,26 @@ ols_mod_1981_table %>%
 
 **Using the data for 1978, provide some evidence the location choice of the incinerator was not “random”, but rather selected on the basis of house values and characteristics. [Hint: in the 1978 sample, are house values and characteristics balanced by nearinc status?]**
 
+In the code chunk below, I filter the housing data for North Andover to only observations from 1978. 
+
 ```{r}
 #filter housing for only observations from 1981
 housing_1978 <- housing %>%
   filter(year == 1978)
 ```
 
+\noindent In the next two sections, I filter first the 1978 data for houses near the incinerator and return summary statistics for each variable, then the summary statistics for houses far from the incinerator. Comparing these helped me to select variables to test for non-randomness using simple OLS regressions. 
+
 ## Houses Near the Incinerator: 1978 Summary Exploration
 
 \noindent The code chunk below filters the data for observations from the housing in 1978 subset for only the houses near the incinerator. It returns the summary statistics for each of the seven variables for this subset of a subset.
 
 ```{r}
+#filter data for houses near incinerator
 housing_1978_nearinc <- housing_1978 %>% 
   filter(nearinc == 1)
 
+#print summary table
 summary(housing_1978_nearinc) %>% 
   kable()
 ```
@@ -121,16 +127,18 @@ summary(housing_1978_nearinc) %>%
 \noindent The code chunk below filters the data for observations from the housing in 1978 subset for only the houses far from the incinerator. It returns the summary statistics for each of the seven variables for this subset of a subset.
 
 ```{r}
+#filter data for houses far from incinerator
 housing_1978_farinc <- housing_1978 %>% 
   filter(nearinc == 0)
 
+#print summary table
 summary(housing_1978_farinc) %>% 
   kable()
 ```
 
 \noindent In comparing summary statistics for variables from 1978 Andover houses from near and far from the incinerator, we can see that houses far from the incinerator have higher mean and median area, land, and price, and lower mean and median age. This suggests location choice of the incinerator _may not_ be random. 
 
-\noindent In the code chunk below, linear regressions return the average difference in outcomes between houses near and far from the incinerator. 
+\noindent In the code chunks below, linear regressions return the average difference in outcomes for area, lot area, and age between houses near and far from the incinerator. 
 
 ## Simple OLS: Average Differences
 
@@ -148,6 +156,8 @@ mod1_1978_table %>%
   kable()
 ```
 
+\noindent The results indicate that on average, houses near the incinerator have an area `r abs(round(mod1_1978$coefficient[2], digits = 2))` square feet smaller than houses far from the incinerator. 
+
 ### Average Difference in Area of the Lot
 
 ```{r}
@@ -162,9 +172,23 @@ mod2_1978_table %>%
   kable()
 ```
 
-\noindent The results indicate that on average, houses near the incinerator have an area `r abs(round(mod1_1978$coefficient[2], digits = 2))` square feet smaller than houses far from the incinerator. 
-
 \noindent On average, houses near the incinerator have `r abs(round(mod2_1978$coefficient[2], digits = 2))` fewer square feet of lot compared to houses far from the incinerator. 
+
+### Average Difference in Age of the House
+
+```{r}
+mod3_1978 <- lm_robust(age ~ nearinc, data = housing_1978)
+
+#create table with regression results
+mod3_1978_table <- tidy(mod3_1978)
+
+#print table 
+mod3_1978_table %>% 
+  select(term, estimate, std.error, p.value, conf.low, conf.high) %>%
+  kable()
+```
+
+\noindent On average, houses near the incinerator are `r abs(round(mod3_1978$coefficient[2], digits = 2))` year older than houses far from the incinerator. 
 
 \noindent These differences show that on average, houses near and far from the incinerator have statistically different characteristics. This serves as evidence that the siting of the generator was not "random." 
 
@@ -182,12 +206,21 @@ mod2_1978_table %>%
 
 **Use a difference-in-differences (DD) estimator to estimate the causal effect of the incinerator on housing values without controlling for house and lot characteristics. Interpret the magnitude and sign of the estimated DD coefficient.**
 
+The code chunk below runs a difference in difference regression to estimate the causal effect of the incinerator on housing values without controls for house and lot characteristics. 
+
 ```{r}
+#difference in difference regression without controls
 dd <- lm_robust(formula = rprice ~ nearinc +
            year,
          data = housing)
 
-summary(dd)
+#create table with regression results
+dd_table <- tidy(dd)
+
+#print table 
+dd_table %>% 
+  select(term, estimate, std.error, p.value, conf.low, conf.high) %>%
+  kable()
 ```
 
 The DD value tells us that by holding time constant, the houses near the incinerator cost `r abs(round(dd$coefficient[2], digits = 2))` less than houses far from the incinerator. 
@@ -199,6 +232,8 @@ The DD value tells us that by holding time constant, the houses near the inciner
 # Question E
 
 **Report the 95% confidence interval for the estimate of the causal effect on the incinerator in (d).**
+
+The code chuck below calculates the 95% confidence interval for the causal effect on the incinerator. 
 
 ```{r}
 dd_ci_95 <- confint(dd)
@@ -214,7 +249,10 @@ The 95% confidence interval for the estimate of the causal effect on the inciner
 
 **How does your answer in (d) changes when you control for house and lot characteristics? Test the hypothesis that the coefficients on the house and lot characteristics are all jointly equal to 0.**
 
+The code chunk below runs a difference in difference regression to estimate the causal effect of the incinerator on housing values with controls for house and lot characteristics. 
+
 ```{r}
+#difference in difference regression with controls
 dd_2 <- lm_robust(formula = rprice ~ nearinc +
              year +
              age +
@@ -223,12 +261,20 @@ dd_2 <- lm_robust(formula = rprice ~ nearinc +
              land,
          data = housing)
 
-summary(dd_2)
+#create table with regression results
+dd_2_table <- tidy(dd_2)
+
+#print table 
+dd_2_table %>% 
+  select(term, estimate, std.error, p.value, conf.low, conf.high) %>%
+  kable()
 ```
+
+When you control for house and lot characteristics, the difference in price between houses near and far from the incinerator, holding all else equal is, is smaller than in the model in which we do not control for these characteristics. This smaller Beta 1 value, however, is no longer statistically significant in the new model. This means that beings near or far from the incinerator may not be a good indicator for the price of a house in North Andover.
 
 \newpage
 
-When you control for house and lot characteristics, the difference in price between houses near and far from the incinerator, holding all else equal is, is smaller than in the model in which we do not control for these characteristics. This smaller Beta 1 value, however, is no longer statistically significant in the new model. This means that beings near or far from the incinerator may not be a good indicator for the price of a house in North Andover.
+The code chunk below uses a linear hypothesis test to test the hypothesis that the coefficients on the house and lot characteristics are all jointly equal to 0.
 
 ```{r}
 #linear hypothesis
