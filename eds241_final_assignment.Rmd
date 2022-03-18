@@ -209,10 +209,16 @@ mod3_1978_table %>%
 The code chunk below runs a difference in difference regression to estimate the causal effect of the incinerator on housing values without controls for house and lot characteristics. 
 
 ```{r}
+#add post treatment indicator and interaction effect (slide 12)
+dd_df <- housing %>% 
+  mutate(post_treatment = factor(ifelse(year == 1981, 1, 0)),
+         d = factor(ifelse(post_treatment == 1 & nearinc == 1, 1, 0))) # 1 if in treatment group and post treatment
+
 #difference in difference regression without controls
 dd <- lm_robust(formula = rprice ~ nearinc +
-           year,
-         data = housing)
+           d +
+             post_treatment,
+         data = dd_df)
 
 #create table with regression results
 dd_table <- tidy(dd)
@@ -223,7 +229,7 @@ dd_table %>%
   kable()
 ```
 
-The DD value tells us that by holding time constant, the houses near the incinerator cost `r abs(round(dd$coefficient[2], digits = 2))` less than houses far from the incinerator. 
+The DD value tells us that the houses near the incinerator in 1981 cost `r abs(round(dd$coefficient[3], digits = 2))` less than houses near the incinerator in 1978. 
 
 \noindent
 
@@ -241,7 +247,7 @@ dd_ci_95 <- confint(dd)
 dd_ci_95
 ```
 
-The 95% confidence interval for the estimate of the causal effect on the incinerator is (d) is `r round(dd_ci_95[2], digits = 2)` to `r round(dd_ci_95[2,2], digits = 2)`
+The 95% confidence interval for the estimate of the causal effect on the incinerator is (d) is `r round(dd_ci_95[3,1], digits = 2)` to `r round(dd_ci_95[3,2], digits = 2)`
 
 \newpage
 
@@ -254,12 +260,13 @@ The code chunk below runs a difference in difference regression to estimate the 
 ```{r}
 #difference in difference regression with controls
 dd_2 <- lm_robust(formula = rprice ~ nearinc +
-             year +
-             age +
-             rooms +
-             area +
-             land,
-         data = housing)
+                    d +
+                    post_treatment +
+                    age +
+                    rooms +
+                    area +
+                    land,
+                  data = dd_df)
 
 #create table with regression results
 dd_2_table <- tidy(dd_2)
@@ -270,7 +277,7 @@ dd_2_table %>%
   kable()
 ```
 
-When you control for house and lot characteristics, the difference in price between houses near and far from the incinerator, holding all else equal is, is smaller than in the model in which we do not control for these characteristics. This smaller Beta 1 value, however, is no longer statistically significant in the new model. This means that beings near or far from the incinerator may not be a good indicator for the price of a house in North Andover.
+When you control for house and lot characteristics, the difference in price between houses near the incinerator from 1978 to 1981 is greater than in the model in which we do not control for these characteristics. This smaller coefficient value, however, is no longer statistically significant at the 0.05 p value in the new model. 
 
 \newpage
 
@@ -294,7 +301,18 @@ With this P value, I would reject the null hypothesis that the coefficients on t
 
 **Using the results from the DD regression in (f), calculate by how much did real housing values change (for the control group) on average between 1978 and 1981.**
 
-Between 1978 and 1981, real housing values increased by `r round(dd_2$coefficient[3], digits = 2)` dollars if all other variables are held equal. 
+```{r}
+#far house price in 1978
+control_1978 <- dd_2$coefficients[1]
+
+#far house price in 1981
+control_1981 <- dd_2$coefficients[4]
+
+#difference
+real_housing_value_change <- control_1981 - control_1978
+```
+
+The real housing value change between 1978 and 1981 was `r round(real_housing_value_change, digits = 2)` dollars. 
 
 \newpage
 
